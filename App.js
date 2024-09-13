@@ -49,9 +49,9 @@ export default function App() {
       </View>
 
       {/* Conditional Rendering of Screens */}
-      {currentScreen === 'LiftingSession' && <LiftingSessionScreen />}
-      {currentScreen === 'Profile' && <ProfileScreen />}
-      {currentScreen === 'WorkoutPlans' && <WorkoutPlanScreen />}
+      {currentScreen === 'LiftingSession' && <LiftingSessionScreen user={user} />}
+      {currentScreen === 'Profile' && <ProfileScreen user={user} />}
+      {currentScreen === 'WorkoutPlans' && <WorkoutPlanScreen user={user} />}
     </View>
   );
 }
