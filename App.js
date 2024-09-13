@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Button } from 'react-native-paper'; // Import Button from react-native-paper
+import { Provider as PaperProvider, Button } from 'react-native-paper'; // Import Provider and Button from react-native-paper
 import AuthScreen from './AuthScreen';
 import LiftingSessionScreen from './LiftingSessionScreen';
 import ProfileScreen from './ProfileScreen';
@@ -40,19 +40,21 @@ export default function App() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Navigation Buttons */}
-      <View style={styles.navContainer}>
-        <Button mode="text" onPress={() => setCurrentScreen('LiftingSession')}>Lifting Sessions</Button>
-        <Button mode="text" onPress={() => setCurrentScreen('Profile')}>Profile</Button>
-        <Button mode="text" onPress={() => setCurrentScreen('WorkoutPlans')}>Workout Plans</Button>
-      </View>
+    <PaperProvider>
+      <View style={styles.container}>
+        {/* Navigation Buttons */}
+        <View style={styles.navContainer}>
+          <Button mode="text" onPress={() => setCurrentScreen('LiftingSession')}>Lifting Sessions</Button>
+          <Button mode="text" onPress={() => setCurrentScreen('Profile')}>Profile</Button>
+          <Button mode="text" onPress={() => setCurrentScreen('WorkoutPlans')}>Workout Plans</Button>
+        </View>
 
-      {/* Conditional Rendering of Screens */}
-      {currentScreen === 'LiftingSession' && <LiftingSessionScreen user={user} />}
-      {currentScreen === 'Profile' && <ProfileScreen user={user} />}
-      {currentScreen === 'WorkoutPlans' && <WorkoutPlanScreen user={user} />}
-    </View>
+        {/* Conditional Rendering of Screens */}
+        {currentScreen === 'LiftingSession' && <LiftingSessionScreen user={user} />}
+        {currentScreen === 'Profile' && <ProfileScreen user={user} />}
+        {currentScreen === 'WorkoutPlans' && <WorkoutPlanScreen user={user} />}
+      </View>
+    </PaperProvider>
   );
 }
 

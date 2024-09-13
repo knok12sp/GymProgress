@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, FlatList, StyleSheet, Dimensions, Alert } from 'react-native';
-import { TextInput, Button, Card, Title, ActivityIndicator } from 'react-native-paper';
+import { TextInput, Button, Card, Title, ActivityIndicator, IconButton, Menu, Divider } from 'react-native-paper';
 import { supabase } from './supabaseClient';
 import { LineChart } from 'react-native-chart-kit';
 
@@ -8,14 +8,15 @@ const screenWidth = Dimensions.get('window').width;
 
 const LiftingSessionScreen = ({ user }) => {
   const [exercise, setExercise] = useState('');
+  const [selectedExercise, setSelectedExercise] = useState('');
   const [weight, setWeight] = useState('');
   const [reps, setReps] = useState('');
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
-    console.log('User:', user);
     if (user) {
       fetchSessions();
     } else {
@@ -26,9 +27,7 @@ const LiftingSessionScreen = ({ user }) => {
   const fetchSessions = async () => {
     setLoading(true);
     setFetchError(null);
-
     try {
-      console.log('Fetching sessions for user ID:', user.id);
       const { data, error } = await supabase
         .from('lifting_sessions')
         .select('*')
@@ -39,10 +38,8 @@ const LiftingSessionScreen = ({ user }) => {
         throw error;
       }
 
-      console.log('Sessions fetched:', data);
       setSessions(data);
     } catch (error) {
-      console.error('Error fetching sessions:', error.message);
       setFetchError('Error fetching sessions');
       Alert.alert('Error', 'Could not fetch sessions. Please try again.');
     } finally {
@@ -61,6 +58,11 @@ const LiftingSessionScreen = ({ user }) => {
       return;
     }
 
+    if (isNaN(weight) || isNaN(reps)) {
+      Alert.alert('Validation Error', 'Weight and reps must be numeric values.');
+      return;
+    }
+
     setLoading(true);
     setFetchError(null);
 
@@ -73,7 +75,6 @@ const LiftingSessionScreen = ({ user }) => {
         user_id: user.id,
       };
 
-      console.log('Adding session:', sessionData);
       const { error } = await supabase
         .from('lifting_sessions')
         .insert([sessionData]);
@@ -82,27 +83,45 @@ const LiftingSessionScreen = ({ user }) => {
         throw error;
       }
 
-      console.log('Session added successfully');
       setExercise('');
       setWeight('');
       setReps('');
       await fetchSessions();
     } catch (error) {
-      console.error('Error adding session:', error.message);
       Alert.alert('Error', 'Could not add session. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  const deleteSession = async (id) => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('lifting_sessions')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        throw error;
+      }
+      await fetchSessions();
+    } catch (error) {
+      Alert.alert('Error', 'Could not delete session.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredSessions = sessions.filter((s) => s.exercise === selectedExercise);
   const weightData = {
-    labels: sessions.map(s => new Date(s.date).toLocaleDateString()),
-    datasets: [{ data: sessions.map(s => s.weight) }],
+    labels: filteredSessions.map((s) => new Date(s.date).toLocaleDateString()),
+    datasets: [{ data: filteredSessions.map((s) => s.weight) }],
   };
 
   return (
     <View style={styles.container}>
-      <Title>Add Lifting Session</Title>
+      <Title style={styles.title}>Add Lifting Session</Title>
 
       <TextInput
         label="Exercise"
@@ -124,15 +143,55 @@ const LiftingSessionScreen = ({ user }) => {
         onChangeText={setReps}
         style={styles.input}
       />
-      <Button
-        mode="contained"
-        onPress={addSession}
-        loading={loading}
-        disabled={loading}
-        style={styles.button}
+
+      <View style={styles.buttonContainer}>
+        <Button
+          mode="contained"
+          onPress={addSession}
+          loading={loading}
+          disabled={loading}
+          style={styles.button}
+        >
+          {loading ? 'Adding...' : 'Add Session'}
+        </Button>
+        <Button
+          mode="outlined"
+          onPress={() => {
+            setExercise('');
+            setWeight('');
+            setReps('');
+          }}
+          style={styles.clearButton}
+        >
+          Clear
+        </Button>
+      </View>
+
+      <Title style={styles.title}>Select Exercise to View Progress</Title>
+      <Menu
+        visible={menuVisible}
+        onDismiss={() => setMenuVisible(false)}
+        anchor={
+          <Button
+            mode="outlined"
+            onPress={() => setMenuVisible(true)}
+            style={styles.pickerButton}
+          >
+            {selectedExercise || 'Select an Exercise'}
+          </Button>
+        }
       >
-        {loading ? 'Adding...' : 'Add Session'}
-      </Button>
+        {[...new Set(sessions.map((s) => s.exercise))].map((exercise) => (
+          <Menu.Item
+            key={exercise}
+            onPress={() => {
+              setSelectedExercise(exercise);
+              setMenuVisible(false);
+            }}
+            title={exercise}
+          />
+        ))}
+      </Menu>
 
       {loading && !fetchError ? (
         <ActivityIndicator size="large" color="#6200ee" style={styles.loadingIndicator} />
@@ -140,20 +199,20 @@ const LiftingSessionScreen = ({ user }) => {
         <>
           {fetchError && <Text style={styles.errorText}>{fetchError}</Text>}
 
-          {sessions.length === 0 && !loading && !fetchError && (
-            <Text>No sessions available.</Text>
+          {filteredSessions.length === 0 && !loading && !fetchError && selectedExercise && (
+            <Text>No sessions available for {selectedExercise}.</Text>
           )}
 
-          {sessions.length > 0 && (
+          {filteredSessions.length > 0 && selectedExercise && (
             <>
               <LineChart
                 data={weightData}
-                width={screenWidth - 40} // Adjust width to fit within padding
+                width={screenWidth - 40}
                 height={220}
                 chartConfig={{
-                  backgroundColor: '#1e2923',
-                  backgroundGradientFrom: '#1e2923',
-                  backgroundGradientTo: '#08130d',
+                  backgroundColor: '#2c3e50',
+                  backgroundGradientFrom: '#34495e',
+                  backgroundGradientTo: '#2c3e50',
                   decimalPlaces: 2,
                   color: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
                   labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
@@ -165,15 +224,23 @@ const LiftingSessionScreen = ({ user }) => {
               />
 
               <FlatList
-                data={sessions}
+                data={filteredSessions}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                   <Card style={styles.card}>
                     <Card.Content>
                       <Title>{item.exercise}</Title>
-                      <Text>{item.weight} kg x {item.reps} reps</Text>
+                      <Text>
+                        {item.weight} kg x {item.reps} reps
+                      </Text>
+                      <Text>Total: {item.weight * item.reps} kg lifted</Text>
                       <Text>{new Date(item.date).toDateString()}</Text>
                     </Card.Content>
+                    <IconButton
+                      icon="delete"
+                      onPress={() => deleteSession(item.id)}
+                      style={styles.deleteButton}
+                    />
                   </Card>
                 )}
               />
@@ -186,23 +253,43 @@ const LiftingSessionScreen = ({ user }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-    padding: 20, 
-    backgroundColor: '#f5f5f5' 
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#f5f5f5',
   },
-  input: { 
-    marginBottom: 15 
-  },
-  button: {
+  title: {
+    textAlign: 'center',
     marginBottom: 20,
   },
-  chart: { 
-    marginVertical: 20, 
-    borderRadius: 16 
+  input: {
+    marginBottom: 15,
   },
-  card: { 
-    marginVertical: 10 
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  button: {
+    flex: 1,
+    marginRight: 10,
+  },
+  clearButton: {
+    flex: 1,
+  },
+  pickerButton: {
+    marginVertical: 20,
+  },
+  chart: {
+    marginVertical: 20,
+    borderRadius: 16,
+  },
+  card: {
+    marginVertical: 10,
+  },
+  deleteButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
   },
   loadingIndicator: {
     marginVertical: 20,
