@@ -187,6 +187,7 @@ const LiftingSessionScreen = ({ user }) => {
           loading={loading}
           disabled={loading}
           style={styles.button}
+          labelStyle={styles.buttonText} // Apply text style here
         >
           {loading ? 'Adding...' : 'Add Session'}
         </Button>
@@ -198,6 +199,7 @@ const LiftingSessionScreen = ({ user }) => {
             setReps('');
           }}
           style={styles.clearButton}
+          labelStyle={styles.buttonText} // Apply text style here
         >
           Clear
         </Button>
@@ -208,6 +210,7 @@ const LiftingSessionScreen = ({ user }) => {
         onPress={() => setShowGraph(true)}
         style={styles.graphButton}
         disabled={!selectedExercise || filteredSessions.length === 0}
+        labelStyle={styles.buttonText} // Apply text style here
       >
         Show Progress Graph
       </Button>
@@ -261,7 +264,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#111',
+    backgroundColor: '#f5f5f5',
   },
   title: {
     textAlign: 'center',
@@ -283,6 +286,9 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 10,
     backgroundColor: '#ff6347',
+  },
+  buttonText: {
+    color: 'black', // Set button text color to black
   },
   clearButton: {
     flex: 1,
